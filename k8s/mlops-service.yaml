@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mlops-pvc
+  namespace: mlops
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlops-service
+  namespace: mlops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlops-service
+  template:
+    metadata:
+      labels:
+        app: mlops-service
+    spec:
+      containers:
+      - name: mlops-service
+        image: mlops-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        - containerPort: 50051
+        env:
+        - name: MINIO_ENDPOINT
+          value: "minio-service:9000"
+        - name: MINIO_ACCESS_KEY
+          value: "minioadmin"
+        - name: MINIO_SECRET_KEY
+          value: "minioadmin"
+        - name: MINIO_BUCKET
+          value: "mlops"
+        - name: CLEARML_API_HOST
+          value: "http://clearml-api:8008"
+        - name: CLEARML_WEB_HOST
+          value: "http://clearml-web:8080"
+        - name: CLEARML_FILES_HOST
+          value: "http://clearml-files:8081"
+        - name: MODELS_DIR
+          value: "/app/models"
+        - name: DATASETS_DIR
+          value: "/app/datasets"
+        volumeMounts:
+        - name: storage
+          mountPath: /app/models
+        - name: storage
+          mountPath: /app/datasets
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+      volumes:
+      - name: storage
+        persistentVolumeClaim:
+          claimName: mlops-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlops-service
+  namespace: mlops
+spec:
+  selector:
+    app: mlops-service
+  ports:
+  - port: 8000
+    targetPort: 8000
+    name: rest
+  - port: 50051
+    targetPort: 50051
+    name: grpc
+  type: ClusterIP
+

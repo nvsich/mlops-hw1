@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:5.0
+    container_name: clearml-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=clearml
+      - MONGO_INITDB_ROOT_PASSWORD=clearml
+
+  redis:
+    image: redis:7-alpine
+    container_name: clearml-redis
+    ports:
+      - "6379:6379"
+
+  clearml-server:
+    image: allegroai/clearml-server:latest
+    container_name: clearml-server
+    ports:
+      - "8008:8008"
+      - "8080:8080"
+      - "8081:8081"
+    environment:
+      - CLEARML_HOST_IP=localhost
+      - MONGODB_HOST=mongodb
+      - REDIS_HOST=redis
+      - ELASTIC_SERVICE_HOST=elasticsearch
+      - ELASTIC_SERVICE_PORT=9200
+    depends_on:
+      - mongodb
+      - redis
+      - elasticsearch
+    volumes:
+      - clearml_data:/opt/clearml/data
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+    container_name: clearml-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+volumes:
+  mongodb_data:
+  clearml_data:
+  elasticsearch_data:
+

@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlops-dashboard
+  namespace: mlops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlops-dashboard
+  template:
+    metadata:
+      labels:
+        app: mlops-dashboard
+    spec:
+      containers:
+      - name: dashboard
+        image: mlops-dashboard:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8501
+        env:
+        - name: API_BASE_URL
+          value: "http://mlops-service:8000"
+        - name: STREAMLIT_SERVER_PORT
+          value: "8501"
+        - name: STREAMLIT_SERVER_ADDRESS
+          value: "0.0.0.0"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlops-dashboard
+  namespace: mlops
+spec:
+  selector:
+    app: mlops-dashboard
+  ports:
+  - port: 8501
+    targetPort: 8501
+  type: NodePort
+
